@@ -48,18 +48,22 @@ body {
   margin: 2px;
   border-radius: 12px;
   box-shadow: 0 0 12px #ffdd33;
-  transition: box-shadow 0.25s ease, transform 0.2s ease;
+  transition: box-shadow 0.25s ease, transform 0.2s ease, color 0.3s ease;
   outline: none;
   font-weight: 900;
   text-shadow: 0 0 3px #ffdd33;
+  /* Qo‘shimcha: smooth transform uchun will-change */
+  will-change: transform;
 }
 
+/* Hover uchun oldingi effektlar saqlanib qoladi */
 .btn:hover:not(:disabled) {
   box-shadow: 0 0 25px #fff66d, inset 0 0 15px #fff66d;
   transform: scale(1.1);
   color: #ffffaa;
 }
 
+/* Disabled holat */
 .btn:disabled {
   cursor: default;
   opacity: 0.5;
@@ -68,6 +72,25 @@ body {
   border-color: #555522;
 }
 
+/* Button bosilganda animatsiya qo‘shish uchun :active va JS-trigger animatsiya */
+.btn:active {
+  animation: btn-click-rotate 0.4s ease forwards;
+}
+
+/* Qo‘shimcha animatsiya kalitframe-lar: aylanish va kichik kattalash */
+@keyframes btn-click-rotate {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+/* Tabriklash oynasi */
 #celebration {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
