@@ -3,28 +3,65 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tic-Tac-To o'yini</title>
+<title>Tic-Tac-To o'yini v4</title>
 <link rel="stylesheet" href="style.css" />
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
-<div id="container">
-  <div id="playerText">Player 1</div>
-  <div class="row">
-    <button class="btn" data-index="0"></button>
-    <button class="btn" data-index="1"></button>
-    <button class="btn" data-index="2"></button>
+<!-- Asosiy Header: Username va sozlamalar ikon -->
+<header id="main-header">
+  <div id="currentUsername">---</div>
+  <button id="settingsToggle" title="Sozlamalar" aria-label="Sozlamalar">
+    &#9881;
+  </button>
+</header>
+
+<!-- Login Form -->
+<div id="login-container" style="display:none;">
+  <h2>Login / Ro'yxatdan o'tish</h2>
+  <input type="text" id="usernameInput" placeholder="Foydalanuvchi ismi" maxlength="15" />
+  <button id="loginBtn">Kirish</button>
+  <div id="loginMsg" class="msg-text"></div>
+</div>
+
+<!-- O'yin Bloki -->
+<div id="game-container" style="display:none;">
+
+  <div id="container">
+    <div id="playerText">Player 1</div>
+    <div class="row">
+      <button class="btn" data-index="0"></button>
+      <button class="btn" data-index="1"></button>
+      <button class="btn" data-index="2"></button>
+    </div>
+    <div class="row">
+      <button class="btn" data-index="3"></button>
+      <button class="btn" data-index="4"></button>
+      <button class="btn" data-index="5"></button>
+    </div>
+    <div class="row">
+      <button class="btn" data-index="6"></button>
+      <button class="btn" data-index="7"></button>
+      <button class="btn" data-index="8"></button>
+    </div>
   </div>
-  <div class="row">
-    <button class="btn" data-index="3"></button>
-    <button class="btn" data-index="4"></button>
-    <button class="btn" data-index="5"></button>
+
+</div>
+
+<!-- Sozlamalar panel (langarlangan, chapdan o'ngga suriladi) -->
+<div id="settingsPanel" class="hidden">
+  <div class="settings-header">
+    <h3>Sozlamalar</h3>
+    <button id="settingsClose" aria-label="Sozlamalarni yopish">&times;</button>
   </div>
-  <div class="row">
-    <button class="btn" data-index="6"></button>
-    <button class="btn" data-index="7"></button>
-    <button class="btn" data-index="8"></button>
-  </div>
+
+  <label for="newUsernameInput">Yangi username kiriting:</label>
+  <input type="text" id="newUsernameInput" maxlength="15" placeholder="Yangi username" />
+  <button id="changeUsernameBtn">Username-ni o'zgartirish</button>
+  <div id="settingsMsg" class="msg-text"></div>
 </div>
 
 <!-- Tabriklash oynasi -->
@@ -45,7 +82,35 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <script>
-  /* Sizning asl script kodi shu yerda o'zgarmagan holda qoldiriladi */
+  // Firebase konfiguratsiya va initsializatsiya
+  const firebaseConfig = {
+    apiKey: "AIzaSyC4w_uo2l3-em4VBZ8JcOw1MluvMkUJfqI",
+    authDomain: "sololearnballpick.firebaseapp.com",
+    databaseURL: "https://sololearnballpick-default-rtdb.firebaseio.com",
+    projectId: "sololearnballpick",
+    storageBucket: "sololearnballpick.firebasestorage.app",
+    messagingSenderId: "117307800410",
+    appId: "1:117307800410:web:89095d96ae6d16305f9163",
+    measurementId: "G-J2ZHS5LN11"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  // Elementlarni olish
+  const loginContainer = document.getElementById('login-container');
+  const gameContainer = document.getElementById('game-container');
+  const loginBtn = document.getElementById('loginBtn');
+  const usernameInput = document.getElementById('usernameInput');
+  const loginMsg = document.getElementById('loginMsg');
+  const newUsernameInput = document.getElementById('newUsernameInput');
+  const changeUsernameBtn = document.getElementById('changeUsernameBtn');
+  const settingsMsg = document.getElementById('settingsMsg');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const settingsToggle = document.getElementById('settingsToggle');
+  const settingsClose = document.getElementById('settingsClose');
+  const currentUsernameDisplay = document.getElementById('currentUsername');
+
+  // O'yin elementlari
   const btns = Array.from(document.querySelectorAll('.btn'));
   const txtPlayer = document.getElementById('playerText');
   const celebration = document.getElementById('celebration');
@@ -56,10 +121,166 @@
   const winSound = document.getElementById('winSound');
   const celebrateSound = document.getElementById('celebrateSound');
 
+  const STORAGE_KEY = 'ticTacToeUser';
+
+  // O'yin holati
   let round = 1;
   let player = 1;
   let touch = false;
 
+  // Local storage-dan foydalanuvchi ma'lumotini olish
+  function getUserFromStorage(){
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      return null;
+    }
+  }
+
+  function saveUserToStorage(userObj){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
+  }
+
+  function isUsernameAvailable(newName) {
+    const storedUser = getUserFromStorage();
+    if(!storedUser) return true; 
+    if(storedUser.username === newName) return true;
+    return !localStorage.getItem('username-' + newName.toLowerCase());
+  }
+
+  function markUsernameOccupied(username, occupied=true){
+    if(occupied){
+      localStorage.setItem('username-' + username.toLowerCase(), 'occupied');
+    } else {
+      localStorage.removeItem('username-' + username.toLowerCase());
+    }
+  }
+
+  async function anonymousLoginAndSaveUsername(username) {
+    loginMsg.textContent = '';
+    try {
+      if(auth.currentUser){
+        return saveUsernameToUserProfile(username);
+      }
+      const result = await auth.signInAnonymously();
+      if(result.user){
+        return saveUsernameToUserProfile(username);
+      }
+    } catch(e) {
+      console.error(e);
+      loginMsg.textContent = 'Xatolik yuz berdi, qayta urinib ko‘ring.';
+    }
+  }
+
+  async function saveUsernameToUserProfile(username) {
+    try {
+      username = username.trim();
+      if(!username || username.length < 2) {
+        loginMsg.textContent = 'Username kamida 2 belgidan iborat bo‘lishi kerak.';
+        return false;
+      }
+      if(!isUsernameAvailable(username)) {
+        loginMsg.textContent = 'Ushbu username band. Iltimos boshqa kiriting.';
+        return false;
+      }
+      const prevUser = getUserFromStorage();
+      if(prevUser && prevUser.username) {
+        markUsernameOccupied(prevUser.username, false);
+      }
+      await auth.currentUser.updateProfile({displayName: username});
+      saveUserToStorage({username: username, uid: auth.currentUser.uid});
+      markUsernameOccupied(username, true);
+
+      loginContainer.style.display = 'none';
+      gameContainer.style.display = 'block';
+      updateCurrentUsername(username);
+
+      loginMsg.textContent = '';
+      settingsMsg.textContent = '';
+      newUsernameInput.value = '';
+      return true;
+    } catch(err) {
+      console.error(err);
+      loginMsg.textContent = 'Username saqlashda xatolik yuz berdi.';
+      return false;
+    }
+  }
+
+  function updateCurrentUsername(name) {
+    currentUsernameDisplay.textContent = name || '---';
+  }
+
+  auth.onAuthStateChanged((user) => {
+    const storedUser = getUserFromStorage();
+    if(user && storedUser && storedUser.uid === user.uid){
+      loginContainer.style.display = 'none';
+      gameContainer.style.display = 'block';
+      updateCurrentUsername(storedUser.username);
+    } else {
+      loginContainer.style.display = 'block';
+      gameContainer.style.display = 'none';
+      updateCurrentUsername(null);
+    }
+  });
+
+  loginBtn.addEventListener('click', async () => {
+    const username = usernameInput.value.trim();
+    if(username.length < 2){
+      loginMsg.textContent = 'Username kamida 2 belgidan iborat bo‘lishi kerak.';
+      return;
+    }
+    loginMsg.textContent = 'Kuting...';
+    const success = await anonymousLoginAndSaveUsername(username);
+    if(success){
+      loginMsg.textContent = '';
+      usernameInput.value = '';
+    }
+  });
+
+  changeUsernameBtn.addEventListener('click', async () => {
+    const newName = newUsernameInput.value.trim();
+    if(newName.length < 2) {
+      settingsMsg.textContent = 'Yangi username kamida 2 ta belgidan iborat bo‘lishi kerak.';
+      return;
+    }
+    if(!isUsernameAvailable(newName)){
+      settingsMsg.textContent = 'Ushbu username band. Boshqa ism tanlang.';
+      return;
+    }
+    settingsMsg.textContent = "O'zgartirilmoqda...";
+    const updated = await saveUsernameToUserProfile(newName);
+    if(updated){
+      settingsMsg.textContent = "Username muvaffaqiyatli o'zgartirildi: " + newName;
+      updateCurrentUsername(newName);
+      toggleSettingsPanel(false);
+    } else {
+      settingsMsg.textContent = "Username o'zgartirishda xatolik yuz berdi.";
+    }
+  });
+
+
+  // Settings panel toggle funksiyasi
+  function toggleSettingsPanel(show) {
+    if(show) {
+      settingsPanel.classList.remove('hidden');
+      settingsPanel.classList.add('visible');
+    } else {
+      settingsPanel.classList.remove('visible');
+      settingsPanel.classList.add('hidden');
+      settingsMsg.textContent = '';
+      newUsernameInput.value = '';
+    }
+  }
+
+  settingsToggle.addEventListener('click', () => {
+    toggleSettingsPanel(true);
+  });
+  settingsClose.addEventListener('click', () => {
+    toggleSettingsPanel(false);
+  });
+
+
+  // O'yin funksiyalari (V3 dan o'zgarmagan)
   function playClickSound(){
     clickSound.currentTime = 0;
     clickSound.play().catch(() => {});
@@ -118,7 +339,7 @@
       }
     }
 
-    if (round > 9) return EndGame(0); // Durang
+    if (round > 9) return EndGame(0); 
     txtPlayer.textContent = "Player " + player;
   }
 
@@ -135,6 +356,7 @@
       winSound.currentTime = 0;
       winSound.play().catch(() => {});
     }
+
     celebration.style.display = 'flex';
   }
 
@@ -182,6 +404,7 @@
   });
 
   txtPlayer.textContent = "Player 1";
+
 </script>
 
 </body>

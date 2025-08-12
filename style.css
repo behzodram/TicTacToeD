@@ -1,14 +1,188 @@
-body {
-  margin: 0;
+/* Bosh sahifa uchun header */
+#main-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  background-color: #444;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
   font-family: 'Arial Black', Gadget, sans-serif;
-  background-color: #222;
+  color: #ffdd33;
+  font-weight: 900;
+  letter-spacing: 2px;
+  z-index: 100;
+  user-select: none;
+}
+
+/* Username ko'rsatiladi */
+#currentUsername {
+  font-size: 1.3rem;
+  user-select: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+}
+
+/* Sozlamalar tugmasi (gear icon) */
+#settingsToggle {
+  background: transparent;
+  border: none;
+  color: #ffdd33;
+  font-size: 1.7rem;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.3s ease;
+}
+
+#settingsToggle:hover {
+  color: #ffee77;
+}
+
+/* Login Container */
+#login-container {
+  background-color: #444;
+  padding: 100px 25px 30px 25px; /* Pastga va tepaga joy berildi header uchun */
+  border-radius: 16px;
+  width: 320px;
+  box-sizing: border-box;
+  user-select: none;
+  box-shadow: 0 0 20px #ffdd3377;
+  text-align: center;
+  color: #ffee88;
+  margin: 80px auto 20px; /* Tepadan pastga, o'rtaga */
+  font-family: 'Arial Black', Gadget, sans-serif;
+}
+
+#login-container h2 {
+  margin-bottom: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+#usernameInput, #newUsernameInput {
+  width: 80%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #ffdd33;
+  background-color: #333;
+  color: #ffee88;
+  font-size: 1.2rem;
+  font-weight: 700;
+  outline: none;
+  text-align: center;
+  margin-bottom: 15px;
+  transition: border-color 0.3s ease;
+  font-family: 'Arial Black', Gadget, sans-serif;
+}
+
+#usernameInput:focus, #newUsernameInput:focus {
+  border-color: #ffee77;
+}
+
+#loginBtn, #changeUsernameBtn {
+  background-color: #ffdd33;
+  border: none;
+  color: #3e2f00;
+  font-weight: 900;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 0 25px #ffdd33cc;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  outline: none;
+  font-family: 'Arial Black', Gadget, sans-serif;
+}
+
+#loginBtn:hover, #changeUsernameBtn:hover {
+  background-color: #ffee77;
+  transform: translateY(-4px);
+}
+
+/* Sozlamalar panel */
+
+#settingsPanel {
+  position: fixed;
+  top: 0; bottom: 0; right: 0;
+  width: 280px;
+  background-color: #444;
+  box-shadow: -4px 0 15px rgba(255,221,51,0.7);
+  padding: 20px 18px 40px 18px;
+  box-sizing: border-box;
+  font-family: 'Arial Black', Gadget, sans-serif;
+  color: #ffdd33;
+  z-index: 200;
+  user-select: none;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+}
+
+#settingsPanel.visible {
+  transform: translateX(0);
+}
+
+#settingsPanel.hidden {
+  transform: translateX(100%);
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
+  margin-bottom: 20px;
+}
+
+.settings-header h3 {
+  font-size: 1.4rem;
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  user-select: text;
+}
+
+#settingsClose {
+  font-size: 2.5rem;
+  background: transparent;
+  border: none;
   color: #ffdd33;
-  overflow: hidden;
+  cursor: pointer;
+  outline: none;
+  line-height: 1;
+  font-weight: 900;
+  user-select: none;
+  transition: color 0.3s ease;
+}
+
+#settingsClose:hover {
+  color: #ffee77;
+}
+
+#settingsPanel label {
+  font-weight: 700;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 6px;
+  user-select: text;
+}
+
+.msg-text {
+  margin-top: 10px;
+  min-height: 20px;
+  color: #ffdd33;
+  font-weight: 700;
+  user-select: none;
+}
+
+/* O'yin container va boshqa elementlar */
+
+#game-container {
+  margin-top: 60px; /* Header uchun joy */
 }
 
 #container {
@@ -21,6 +195,7 @@ body {
   box-shadow: 0 0 15px #ffdd3377;
   position: relative;
   z-index: 10;
+  font-family: 'Arial Black', Gadget, sans-serif;
 }
 
 #playerText {
@@ -52,18 +227,15 @@ body {
   outline: none;
   font-weight: 900;
   text-shadow: 0 0 3px #ffdd33;
-  /* Qo‘shimcha: smooth transform uchun will-change */
   will-change: transform;
 }
 
-/* Hover uchun oldingi effektlar saqlanib qoladi */
 .btn:hover:not(:disabled) {
   box-shadow: 0 0 25px #fff66d, inset 0 0 15px #fff66d;
   transform: scale(1.1);
   color: #ffffaa;
 }
 
-/* Disabled holat */
 .btn:disabled {
   cursor: default;
   opacity: 0.5;
@@ -72,12 +244,11 @@ body {
   border-color: #555522;
 }
 
-/* Button bosilganda animatsiya qo‘shish uchun :active va JS-trigger animatsiya */
+/* Btn klik animatsiyasi */
 .btn:active {
   animation: btn-click-rotate 0.4s ease forwards;
 }
 
-/* Qo‘shimcha animatsiya kalitframe-lar: aylanish va kichik kattalash */
 @keyframes btn-click-rotate {
   0% {
     transform: scale(1) rotate(0deg);
@@ -135,6 +306,7 @@ body {
   transform: translateY(-4px);
 }
 
+/* Canvas confetti */
 canvas {
   position: fixed;
   top: 0; left: 0;
@@ -143,3 +315,18 @@ canvas {
   pointer-events: none;
   z-index: 15;
 }
+
+/* Scrollbar sozlamalar panel uchun */
+#settingsPanel::-webkit-scrollbar {
+  width: 8px;
+}
+
+#settingsPanel::-webkit-scrollbar-thumb {
+  background-color: rgba(255,221,51,0.5);
+  border-radius: 4px;
+}
+
+#settingsPanel::-webkit-scrollbar-track {
+  background-color: #333;
+}
+
