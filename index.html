@@ -1,0 +1,297 @@
+<!--Firebase Project-->
+<!--SololearnBallPick-->
+
+<!--AI turi-->
+<!--https://www.perplexity.ai/-->
+
+<!--v3 uchun talab-->
+<!--v2 dastur: `````` foydalanuvchi faqat 1 marta o'z ismi bilan login qilsin, keyin har safar shu ismda o'yinga avtomatik kirsin. 1ta usernameni faqat 1 kishi band qilsin lekin uni sozlamalardan o'zgartirib bo'lsin va faqat bo'sh usernamega almashtira olsin. v2 dasturdan ko'k rangni kulrang bilan mos tushadigan chiroyliroq rang bilan almashtir-->
+
+<!--v2.0.0 dastur-->
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tic-Tac-To o'yini</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #883355;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: white;
+    overflow: hidden;
+  }
+  #container {
+    background-color: #3355cc;
+    padding: 15px;
+    border-radius: 10px;
+    box-sizing: border-box;
+    width: 320px;
+    user-select: none;
+    position: relative;
+    z-index: 10;
+  }
+  #playerText {
+    font-size: 2.5rem;
+    text-align: center;
+    margin: 0 0 15px 0;
+  }
+  .row {
+    display: flex;
+  }
+  .btn {
+    background-color: gray;
+    border: none;
+    width: 100px;
+    height: 100px;
+    font-size: 4rem;
+    color: white;
+    cursor: pointer;
+    margin: 2px;
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+    outline: none;
+  }
+  .btn:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  /* Tabriklash sahnasi */
+  #celebration {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 20;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    text-align: center;
+  }
+  #celebration h2 {
+    font-size: 32px;
+    margin: 0;
+  }
+  #play-again {
+    margin-top: 20px;
+    padding: 10px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 25px;
+    background-color: white;
+    color: #764ba2;
+    font-weight: bold;
+    cursor: pointer;
+    outline: none;
+  }
+  #play-again:hover {
+    background-color: #eee;
+    transform: translateY(-2px);
+  }
+
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 15;
+  }
+</style>
+</head>
+<body>
+
+<div id="container">
+  <div id="playerText">Player 1</div>
+  <div class="row">
+    <button class="btn" data-index="0"></button>
+    <button class="btn" data-index="1"></button>
+    <button class="btn" data-index="2"></button>
+  </div>
+  <div class="row">
+    <button class="btn" data-index="3"></button>
+    <button class="btn" data-index="4"></button>
+    <button class="btn" data-index="5"></button>
+  </div>
+  <div class="row">
+    <button class="btn" data-index="6"></button>
+    <button class="btn" data-index="7"></button>
+    <button class="btn" data-index="8"></button>
+  </div>
+</div>
+
+<!-- Tabriklash oynasi -->
+<div id="celebration">
+  <h2 id="score-msg"></h2>
+  <button id="play-again" onclick="ResetGame()">Play Again</button>
+</div>
+
+<!-- Confetti uchun canvas -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Ovozlar -->
+<audio id="winSound" preload="auto" src="https://www.dropbox.com/scl/fi/7h9ob4cd3iknipeqhgf3u/mixkit-achievement-bell-600.wav?rlkey=zyq1auz9urk3vnx70g8x9sp4c&st=iva17nk3&raw=1"></audio>
+<audio id="clickSound" preload="auto" src="https://www.dropbox.com/scl/fi/imtc8kle7z9zv8n5s1u97/select-sound-121244.mp3?rlkey=xr90r1doaem833fwntb0po2ms&st=kt25o6un&raw=1"></audio>
+<audio id="celebrateSound" preload="auto" src="https://www.dropbox.com/scl/fi/pl2xdyazb467pswzb08tl/mixkit-video-game-treasure-2066.wav?rlkey=shpb4dmiq85u34ipvy4rlv5i4&st=x2dew0lo&raw=1"></audio>
+
+<!-- Confetti JS -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<script>
+  const btns = Array.from(document.querySelectorAll('.btn'));
+  const txtPlayer = document.getElementById('playerText');
+  const celebration = document.getElementById('celebration');
+  const scoreMsg = document.getElementById('score-msg');
+  const playAgainBtn = document.getElementById('play-again');
+  const confettiCanvas = document.getElementById('confetti-canvas');
+  const clickSound = document.getElementById('clickSound');
+  const winSound = document.getElementById('winSound');
+  const celebrateSound = document.getElementById('celebrateSound');
+
+  let round = 1;
+  let player = 1;
+  let touch = false;
+
+  // Tugma uchun bosilish ovozi
+  function playClickSound(){
+    clickSound.currentTime = 0;
+    clickSound.play().catch(() => {});
+  }
+
+  function SetButton(btn, text) {
+    btn.style.transform = 'rotate(360deg)';
+    setTimeout(() => {
+      btn.textContent = text;
+      btn.style.transform = '';
+    }, 100);
+    btn.dataset.text = text;
+  }
+
+  function launchConfetti() {
+    confetti({
+      particleCount: 150,
+      spread: 90,
+      origin: { y: 0.6 },
+      disableForReducedMotion: true
+    });
+
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 }
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 }
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    })();
+  }
+
+  function CheckWin() {
+    touch = false;
+    const winRows = ["012", "345", "678", "036", "147", "258", "048", "642"];
+    for (const rowIndex of winRows) {
+      let row = "";
+      for (let j = 0; j < 3; j++) {
+        row += btns[+rowIndex[j]].dataset.text || '';
+      }
+      if (row === 'XXX' || row === 'OOO') {
+        return EndGame(player);
+      }
+    }
+
+    // 9 ta qadam to'liq to'ldimi? (round dan 1 oshirib hisoblang)
+    if (round > 9) return EndGame(0); // Durang
+    txtPlayer.textContent = "Player " + player;
+  }
+
+  function EndGame(winner) {
+    // O‘yin tugadi, tugmalarni o'chirish uchun barchasini disabled qilamiz
+    btns.forEach(btn => btn.disabled = true);
+
+    if (winner) {
+      scoreMsg.textContent = `Player ${winner} won! 🎉`;
+      celebrateSound.currentTime = 0;
+      celebrateSound.play().catch(() => {});
+      launchConfetti();
+    } else {
+      scoreMsg.textContent = `It's a draw!`;
+      winSound.currentTime = 0;
+      winSound.play().catch(() => {});
+    }
+
+    // Tabriklash oynasini ko'rsatamiz
+    celebration.style.display = 'flex';
+  }
+
+  function ResetGame() {
+    // Tabriklash oynasini yashiramiz
+    celebration.style.display = 'none';
+
+    btns.forEach((btn, i) => {
+      btn.disabled = false;
+      SetButton(btn, '');
+    });
+
+    round = 1;
+    player = 1;
+    touch = false;
+    txtPlayer.textContent = "Player 1";
+  }
+
+  function btn_OnTouch(e) {
+    if (touch) return;
+    touch = true;
+
+    playClickSound();
+
+    let btn = e.currentTarget;
+    player = round % 2 === 1 ? 1 : 2;
+
+    if (btn.dataset.text && btn.dataset.text !== '') {
+      touch = false;
+      return;
+    }
+
+    setTimeout(() => {
+      btn.style.opacity = player === 1 ? '0.6' : '1';
+      setTimeout(() => btn.style.opacity = '1', 300);
+    }, 50);
+
+    SetButton(btn, 'XO'[player - 1]);
+    round++;
+    setTimeout(CheckWin, 220);
+  }
+
+  btns.forEach(btn => {
+    btn.dataset.text = '';
+    btn.addEventListener('click', btn_OnTouch);
+  });
+
+  txtPlayer.textContent = "Player 1";
+
+</script>
+</body>
+</html>
