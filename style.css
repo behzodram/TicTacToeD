@@ -1,4 +1,4 @@
-/* Bosh sahifa uchun header */
+/* HEADER */
 #main-header {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -17,7 +17,6 @@
   user-select: none;
 }
 
-/* Username ko'rsatiladi */
 #currentUsername {
   font-size: 1.3rem;
   user-select: text;
@@ -25,9 +24,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 80%;
+  font-family: 'Arial Black', Gadget, sans-serif;
 }
 
-/* Sozlamalar tugmasi (gear icon) */
 #settingsToggle {
   background: transparent;
   border: none;
@@ -36,24 +35,29 @@
   cursor: pointer;
   outline: none;
   transition: color 0.3s ease;
+  font-family: 'Arial Black', Gadget, sans-serif;
 }
 
 #settingsToggle:hover {
   color: #ffee77;
 }
 
-/* Login Container */
+/* Center kontent uchun umumiy sinf (desktop/Android oson joylashish uchun) */
+.centered-container {
+  max-width: 400px;
+  margin: 64px auto 24px; /* Tepadan header uchun joy */
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+/* LOGIN CONTAINER */
 #login-container {
   background-color: #444;
-  padding: 100px 25px 30px 25px; /* Pastga va tepaga joy berildi header uchun */
+  padding: 55px 25px 30px 25px;
   border-radius: 16px;
-  width: 320px;
-  box-sizing: border-box;
-  user-select: none;
   box-shadow: 0 0 20px #ffdd3377;
   text-align: center;
   color: #ffee88;
-  margin: 80px auto 20px; /* Tepadan pastga, o'rtaga */
   font-family: 'Arial Black', Gadget, sans-serif;
 }
 
@@ -103,11 +107,11 @@
   transform: translateY(-4px);
 }
 
-/* Sozlamalar panel */
-
+/* SOZLAMALAR PANELI */
 #settingsPanel {
   position: fixed;
-  top: 0; bottom: 0; right: 0;
+  top: 0; bottom: 0;
+  right: 0;
   width: 280px;
   background-color: #444;
   box-shadow: -4px 0 15px rgba(255,221,51,0.7);
@@ -121,6 +125,8 @@
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  max-height: 100vh;
 }
 
 #settingsPanel.visible {
@@ -179,17 +185,17 @@
   user-select: none;
 }
 
-/* O'yin container va boshqa elementlar */
-
+/* O'YIN KONTEYNERI */
 #game-container {
-  margin-top: 60px; /* Header uchun joy */
+  margin-top: 64px; /* Header uchun joy */
 }
 
 #container {
   background-color: #444;
   padding: 25px 18px;
   border-radius: 16px;
-  width: 330px;
+  width: 100%;
+  max-width: 330px;
   box-sizing: border-box;
   user-select: none;
   box-shadow: 0 0 15px #ffdd3377;
@@ -330,3 +336,13 @@ canvas {
   background-color: #333;
 }
 
+/* Responsiv ayarlamalar: Desktopda o‘rtaga markazlash */
+@media (min-width: 900px) {
+  body {
+    display: flex;
+    justify-content: center;
+  }
+  .centered-container {
+    margin: 80px 0 24px 0;
+  }
+}
