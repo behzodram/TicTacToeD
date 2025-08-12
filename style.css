@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
   font-family: 'Arial Black', Gadget, sans-serif;
   color: #ffdd33;
   font-weight: 900;
@@ -23,10 +23,42 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 80%;
+  max-width: 35%;
   font-family: 'Arial Black', Gadget, sans-serif;
 }
 
+#modeToggleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #ffdd33;
+  font-family: 'Arial Black', Gadget, sans-serif;
+}
+
+.mode-label {
+  user-select: none;
+}
+
+#modeToggle {
+  font-family: 'Arial Black', Gadget, sans-serif;
+  background-color: #333;
+  border: 2px solid #ffdd33;
+  border-radius: 6px;
+  color: #ffee88;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-weight: 900;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.3s ease;
+}
+#modeToggle:hover, #modeToggle:focus {
+  border-color: #ffee77;
+}
+
+/* Sozlamalar tugmasi */
 #settingsToggle {
   background: transparent;
   border: none;
@@ -42,10 +74,10 @@
   color: #ffee77;
 }
 
-/* Center kontent uchun umumiy sinf (desktop/Android oson joylashish uchun) */
+/* Center kontent uchun */
 .centered-container {
-  max-width: 400px;
-  margin: 64px auto 24px; /* Tepadan header uchun joy */
+  max-width: 460px;
+  margin: 64px auto 24px;
   padding: 0 10px;
   box-sizing: border-box;
 }
@@ -185,9 +217,117 @@
   user-select: none;
 }
 
+/* ONLINE PLAYERS PANEL */
+#onlinePanel {
+  margin-top: 20px;
+  border: 1px solid #ffdd33;
+  border-radius: 12px;
+  background-color: #222;
+  padding: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 0 10px #ffdd33aa;
+  font-family: 'Arial Black', Gadget, sans-serif;
+  color: #ffee88;
+}
+
+#onlinePanel h3 {
+  margin-top: 0;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  user-select: none;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+#onlinePlayersList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#onlinePlayersList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background-color: #333;
+  font-weight: 700;
+  cursor: default;
+}
+
+#onlinePlayersList li.no-users {
+  text-align: center;
+  font-style: italic;
+  color: #996600;
+  cursor: default;
+}
+
+#onlinePlayersList li.online-user button.invite-btn {
+  background-color: #ffdd33;
+  border: none;
+  border-radius: 16px;
+  padding: 4px 12px;
+  color: #3e2f00;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 0 15px #ffdd33aa;
+  transition: background-color 0.2s ease;
+}
+
+#onlinePlayersList li.online-user button.invite-btn:hover,
+#onlinePlayersList li.online-user button.invite-btn:focus {
+  background-color: #ffee77;
+  outline: none;
+}
+
+/* END GAME BUTTON */
+#endGameBtn {
+  margin-top: 15px;
+  width: 100%;
+  background-color: #ffdd33;
+  border: none;
+  padding: 14px;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #3e2f00;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 0 30px #ffdd33cc;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  font-family: 'Arial Black', Gadget, sans-serif;
+}
+
+#endGameBtn.hidden {
+  display: none;
+}
+
+#endGameBtn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#endGameBtn:hover:not([aria-disabled="true"]) {
+  background-color: #ffee77;
+  transform: translateY(-4px);
+  outline: none;
+}
+
+/* END GAME NOTIFY */
+#endGameNotice {
+  margin-top: 6px;
+  font-size: 1rem;
+  min-height: 18px;
+  color: #ffdd33;
+  font-weight: 700;
+  font-family: 'Arial Black', Gadget, sans-serif;
+}
+
 /* O'YIN KONTEYNERI */
 #game-container {
-  margin-top: 64px; /* Header uchun joy */
+  margin-top: 64px;
 }
 
 #container {
@@ -322,21 +462,24 @@ canvas {
   z-index: 15;
 }
 
-/* Scrollbar sozlamalar panel uchun */
-#settingsPanel::-webkit-scrollbar {
+/* Scrollbar sozlamalar panel va online players uchun */
+#settingsPanel::-webkit-scrollbar,
+#onlinePanel::-webkit-scrollbar {
   width: 8px;
 }
 
-#settingsPanel::-webkit-scrollbar-thumb {
+#settingsPanel::-webkit-scrollbar-thumb,
+#onlinePanel::-webkit-scrollbar-thumb {
   background-color: rgba(255,221,51,0.5);
   border-radius: 4px;
 }
 
-#settingsPanel::-webkit-scrollbar-track {
+#settingsPanel::-webkit-scrollbar-track,
+#onlinePanel::-webkit-scrollbar-track {
   background-color: #333;
 }
 
-/* Responsiv ayarlamalar: Desktopda o‘rtaga markazlash */
+/* Responsiv ayarlamalar */
 @media (min-width: 900px) {
   body {
     display: flex;

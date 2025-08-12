@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Tic-Tac-To o'yini v4.0.1</title>
+<title>Tic-Tac-To o'yini v4.1.0</title>
 <link rel="stylesheet" href="style.css" />
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -14,6 +14,13 @@
 
 <header id="main-header">
   <div id="currentUsername">---</div>
+  <div id="modeToggleWrapper">
+    <label for="modeToggle" title="O'yin rejimini tanlash" aria-label="O'yin rejimini tanlash" class="mode-label">Rejim:</label>
+    <select id="modeToggle" aria-live="polite" aria-atomic="true" aria-controls="onlinePlayersList">
+      <option value="alone" selected>Alone</option>
+      <option value="global">Global</option>
+    </select>
+  </div>
   <button id="settingsToggle" title="Sozlamalar" aria-label="Sozlamalar">&#9881;</button>
 </header>
 
@@ -45,12 +52,26 @@
       <button class="btn" data-index="8"></button>
     </div>
   </div>
+
+  <!-- Online userlar va takliflar paneli faqat global rejimda ko'rinadi -->
+  <aside id="onlinePanel" class="hidden" aria-live="polite" aria-atomic="true">
+    <h3>Onlayn foydalanuvchilar</h3>
+    <ul id="onlinePlayersList" tabindex="0" aria-label="Onlayn foydalanuvchilar ro'yxati">
+      <!-- userlar JS orqali kiritiladi -->
+    </ul>
+    <div id="invitationMsg" class="msg-text" aria-live="assertive" aria-atomic="true"></div>
+  </aside>
+
+  <!-- "End Game" tugmasi -->
+  <button id="endGameBtn" class="hidden" aria-disabled="true" aria-live="polite">End Game</button>
+  <div id="endGameNotice" class="msg-text" aria-live="polite"></div>
+
 </div>
 
 <!-- Sozlamalar panel -->
-<div id="settingsPanel" class="hidden">
+<div id="settingsPanel" class="hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="settings-header">
-    <h3>Sozlamalar</h3>
+    <h3 id="settingsTitle">Sozlamalar</h3>
     <button id="settingsClose" aria-label="Sozlamalarni yopish">&times;</button>
   </div>
 
@@ -73,6 +94,13 @@
 <audio id="winSound" preload="auto" src="https://www.dropbox.com/scl/fi/7h9ob4cd3iknipeqhgf3u/mixkit-achievement-bell-600.wav?rlkey=zyq1auz9urk3vnx70g8x9sp4c&st=iva17nk3&raw=1"></audio>
 <audio id="clickSound" preload="auto" src="https://www.dropbox.com/scl/fi/imtc8kle7z9zv8n5s1u97/select-sound-121244.mp3?rlkey=xr90r1doaem833fwntb0po2ms&st=kt25o6un&raw=1"></audio>
 <audio id="celebrateSound" preload="auto" src="https://www.dropbox.com/scl/fi/pl2xdyazb467pswzb08tl/mixkit-video-game-treasure-2066.wav?rlkey=shpb4dmiq85u34ipvy4rlv5i4&st=x2dew0lo&raw=1"></audio>
+
+<!-- Yangi qo'shilgan ovozlar -->
+<audio id="invitationSound" preload="auto" src="https://www.myinstants.com/media/sounds/new-notification-sound.mp3"></audio>
+<audio id="globalModeSound" preload="auto" src="https://www.myinstants.com/media/sounds/bleep.mp3"></audio>
+<audio id="aloneModeSound" preload="auto" src="https://www.myinstants.com/media/sounds/piano-keys-5.mp3"></audio>
+<audio id="endGameAvailableSound" preload="auto" src="https://www.myinstants.com/media/sounds/button-21.mp3"></audio>
+<audio id="endGameUnavailableSound" preload="auto" src="https://www.myinstants.com/media/sounds/button-10.mp3"></audio>
 
 <!-- Confetti JS -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -107,6 +135,24 @@
   const settingsToggle = document.getElementById('settingsToggle');
   const settingsClose = document.getElementById('settingsClose');
   const currentUsernameDisplay = document.getElementById('currentUsername');
+  const modeToggle = document.getElementById('modeToggle');
+  const onlinePanel = document.getElementById('onlinePanel');
+  const onlinePlayersList = document.getElementById('onlinePlayersList');
+  const invitationMsg = document.getElementById('invitationMsg');
+  const endGameBtn = document.getElementById('endGameBtn');
+  const endGameNotice = document.getElementById('endGameNotice');
+
+  // Audio elementlar
+  const invitationSound = document.getElementById('invitationSound');
+  const globalModeSound = document.getElementById('globalModeSound');
+  const aloneModeSound = document.getElementById('aloneModeSound');
+  const endGameAvailableSound = document.getElementById('endGameAvailableSound');
+  const endGameUnavailableSound = document.getElementById('endGameUnavailableSound');
+
+  // Oddiy o'yin audio (v4 eski kodingizda mavjud)
+  const clickSound = document.getElementById('clickSound');
+  const winSound = document.getElementById('winSound');
+  const celebrateSound = document.getElementById('celebrateSound');
 
   // O'yin elementlari
   const btns = Array.from(document.querySelectorAll('.btn'));
@@ -115,9 +161,6 @@
   const scoreMsg = document.getElementById('score-msg');
   const playAgainBtn = document.getElementById('play-again');
   const confettiCanvas = document.getElementById('confetti-canvas');
-  const clickSound = document.getElementById('clickSound');
-  const winSound = document.getElementById('winSound');
-  const celebrateSound = document.getElementById('celebrateSound');
 
   const STORAGE_KEY = 'ticTacToeUser';
 
@@ -125,7 +168,15 @@
   let player = 1;
   let touch = false;
 
-  // Lokalga saqlash va olish
+  // Global game states
+  let gameMode = 'alone'; // alone or global
+  let onlineUsers = {}; // uid:user data {username, status:"available"/"playing"}
+  let currentUser = null; // {uid, username}
+  let currentGameId = null; // firebase realtime game ID for paired game
+  let currentOpponent = null; // opponent user data for online game
+  let invitationTimeout = null;
+
+  // =========== UTILS ===============
   function getUserFromStorage(){
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -138,15 +189,18 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
   }
 
-  // Username-ni bazada unikal ekanini tekshirish
-  async function isUsernameAvailable(newName) {
-    newName = newName.toLowerCase().trim();
-    if(!newName) return false;
-    const snapshot = await db.ref('usernames/' + newName).once('value');
+  function validateUsernameFormat(name) {
+    const reg = /^[a-zA-Z0-9_-]{2,15}$/;
+    return reg.test(name);
+  }
+
+  async function isUsernameAvailable(name) {
+    name = name.toLowerCase().trim();
+    if(!name) return false;
+    const snapshot = await db.ref('usernames/' + name).once('value');
     if(snapshot.exists()){
-      const storedUser = getUserFromStorage();
-      // Agar bu username aynan hozirgi foydalanuvchining username’ga teng bo‘lsa ruxsat
-      if(storedUser && storedUser.username.toLowerCase() === newName){
+      // Lekin agar bu hozirgi foydalanuvchi username'sa ruxsat beramiz
+      if(currentUser && currentUser.username.toLowerCase() === name){
         return true;
       }
       return false;
@@ -154,18 +208,13 @@
     return true;
   }
 
-  // Bazada username bandlik holatini saqlash yoki olib tashlash
-  async function markUsernameOccupied(username, occupied = true) {
+  async function markUsernameOccupied(username, occupy = true){
     username = username.toLowerCase().trim();
-    if(!username) return;
-
+    if(!username || !currentUser) return;
     const ref = db.ref('usernames/' + username);
-
-    if(occupied){
-      const storedUser = getUserFromStorage();
-      if(!storedUser) return;
+    if(occupy){
       await ref.set({
-        uid: storedUser.uid,
+        uid: currentUser.uid,
         timestamp: Date.now()
       });
     } else {
@@ -173,13 +222,7 @@
     }
   }
 
-  // Usuallar: username validligini tekshirish (chunki username unikal bo‘lishi yetarli emas)
-  function validateUsernameFormat(name) {
-    const reg = /^[a-zA-Z0-9_-]{2,15}$/;
-    return reg.test(name);
-  }
-
-  // Firebase anonymous login va username yozish
+  // ========== AUTH ================
   async function anonymousLoginAndSaveUsername(username) {
     loginMsg.textContent = '';
     try {
@@ -202,7 +245,6 @@
         }
       }
 
-      // Eski username agar bor bo'lsa, bazadan olib tashlash
       const prevUser = getUserFromStorage();
       if(prevUser && prevUser.username.toLowerCase() !== username.toLowerCase()){
         await markUsernameOccupied(prevUser.username, false);
@@ -210,11 +252,14 @@
 
       await auth.currentUser.updateProfile({displayName: username});
       saveUserToStorage({username: username, uid: auth.currentUser.uid});
+      currentUser = {username, uid: auth.currentUser.uid};
       await markUsernameOccupied(username, true);
 
       loginContainer.style.display = 'none';
       gameContainer.style.display = 'block';
       updateCurrentUsername(username);
+      modeToggle.value = 'alone'; // default alone
+      updateGameMode('alone');
 
       loginMsg.textContent = '';
       settingsMsg.textContent = '';
@@ -228,89 +273,462 @@
     }
   }
 
-  // User state o'zgarganda UI update
   auth.onAuthStateChanged(async (user) => {
-    const storedUser = getUserFromStorage();
-
-    if(user && storedUser && storedUser.uid === user.uid){
-      // Check if username still exists in DB
-      const avail = await isUsernameAvailable(storedUser.username);
-
-      if(!avail){
-        // username baza band; ko'rsatamiz
-        // (bu holat bo‘lishi qiyin, ammo yangilash uchun sozlamalar tavsiya qilinadi)
+    if(user){
+      const storedUser = getUserFromStorage();
+      if(storedUser && storedUser.uid === user.uid){
+        currentUser = storedUser;
+        loginContainer.style.display = 'none';
+        gameContainer.style.display = 'block';
+        updateCurrentUsername(currentUser.username);
+        modeToggle.value = 'alone'; // default mode
+        updateGameMode('alone');
+        addCurrentUserToOnline(); // add to online DB monitoring
+        listenOnlineUsers();
       } else {
-        // Uusername bandligini qayta saqlash, ehtimol oldin olib tashlangan bo‘lsa
-        await markUsernameOccupied(storedUser.username, true);
+        loginContainer.style.display = 'block';
+        gameContainer.style.display = 'none';
+        updateCurrentUsername(null);
       }
-
-      loginContainer.style.display = 'none';
-      gameContainer.style.display = 'block';
-      updateCurrentUsername(storedUser.username);
     } else {
       loginContainer.style.display = 'block';
       gameContainer.style.display = 'none';
       updateCurrentUsername(null);
+      currentUser = null;
+      removeCurrentUserFromOnline();
+      stopListeningOnlineUsers();
     }
   });
 
-  // O'yin username yangilash funktsiyasi
-  async function saveUsernameToUserProfile(username) {
-    username = username.trim();
-    settingsMsg.textContent = '';
+  // ========== Online Users & Invitations ==========
 
-    if(!validateUsernameFormat(username)){
-      settingsMsg.textContent = 'Username 2-15 belgi, faqat harflar, raqamlar, _ yoki - ishlatilishi mumkin.';
-      return false;
-    }
-    
-    const available = await isUsernameAvailable(username);
-    if(!available){
-      settingsMsg.textContent = 'Ushbu username band. Boshqasini tanlang.';
-      return false;
-    }
+  let onlineUsersRef = null;
+  let invitationsRef = null;
+  let gameRef = null;
 
-    try {
-      const storedUser = getUserFromStorage();
-      if(!storedUser) {
-        settingsMsg.textContent = "Siz oldin tizimga kirmagansiz.";
-        return false;
-      }
+  // Current user online DB path: /onlineUsers/uid
+  function userOnlineData(){
+    return {
+      username: currentUser.username,
+      status: 'available', // available or playing
+      lastActive: Date.now(),
+    };
+  }
 
-      if(storedUser.username.toLowerCase() !== username.toLowerCase()) {
-        // Oldingi username ni bo'shatish
-        await markUsernameOccupied(storedUser.username, false);
-      }
+  // Online foydalanuvchi DBga yozish
+  function addCurrentUserToOnline(){
+    if(!currentUser) return;
+    onlineUsersRef = db.ref('onlineUsers/' + currentUser.uid);
+    onlineUsersRef.onDisconnect().remove(); // disconnectda o'chirish
+    onlineUsersRef.set(userOnlineData());
+    onlineUsersRef.update({lastActive: Date.now()});
+    // Qo'shimcha heartbeat tarqatish mumkin
+  }
 
-      await auth.currentUser.updateProfile({displayName: username});
-      saveUserToStorage({username: username, uid: auth.currentUser.uid});
-      await markUsernameOccupied(username, true);
-
-      updateCurrentUsername(username);
-      settingsMsg.textContent = "Username muvaffaqiyatli o'zgartirildi.";
-      return true;
-
-    } catch(e) {
-      console.error(e);
-      settingsMsg.textContent = 'Username o\'zgartirishda xatolik yuz berdi.';
-      return false;
+  function removeCurrentUserFromOnline(){
+    if(onlineUsersRef) {
+      onlineUsersRef.remove();
+      onlineUsersRef.off();
+      onlineUsersRef = null;
     }
   }
 
-  // DOM eventlar //
-  loginBtn.addEventListener('click', async () => {
-    const username = usernameInput.value.trim();
-    if(username.length < 2){
-      loginMsg.textContent = 'Username kamida 2 belgidan iborat bo‘lishi kerak.';
+  // Online userlarni kuzatish va ro'yxatni yangilash
+  function listenOnlineUsers(){
+    if(!currentUser) return;
+    if(window._onlineUsersListener) {
+      db.ref('onlineUsers').off('value', window._onlineUsersListener);
+      window._onlineUsersListener = null;
+    }
+    window._onlineUsersListener = db.ref('onlineUsers').on('value', snapshot => {
+      let val = snapshot.val() || {};
+      // Foydalanuvchilarni hozirgi userni chiqarib tashlab va faqat available statusdagilarni ro'yxatga olish
+      onlineUsers = {};
+      for(let uid in val){
+        if(uid === currentUser.uid) continue; // o'z userimizni chiqaramiz
+        if(val[uid].status === 'available' && val[uid].username){
+          onlineUsers[uid] = {...val[uid]};
+        }
+      }
+      updateOnlineUsersList();
+    });
+  }
+
+  function stopListeningOnlineUsers(){
+    if(window._onlineUsersListener){
+      db.ref('onlineUsers').off('value', window._onlineUsersListener);
+      window._onlineUsersListener = null;
+    }
+  }
+
+  // Online userlar ro'yxatini UI ga chiqarish
+  function updateOnlineUsersList(){
+    onlinePlayersList.innerHTML = '';
+    const uids = Object.keys(onlineUsers);
+    if(uids.length === 0){
+      const li = document.createElement('li');
+      li.textContent = 'Onlayn foydalanuvchi topilmadi.';
+      li.className = 'no-users';
+      onlinePlayersList.appendChild(li);
       return;
     }
-    loginMsg.textContent = 'Kuting...';
-    const success = await anonymousLoginAndSaveUsername(username);
-    if(success){
-      loginMsg.textContent = '';
-      usernameInput.value = '';
+    uids.forEach(uid=>{
+      const user = onlineUsers[uid];
+      const li = document.createElement('li');
+      li.className = 'online-user';
+      li.setAttribute('tabindex', '0');
+      li.textContent = user.username;
+      li.dataset.uid = uid;
+      const inviteBtn = document.createElement('button');
+      inviteBtn.textContent = 'Taklif yuborish';
+      inviteBtn.className = 'invite-btn';
+      inviteBtn.title = `Taklif yuborish ${user.username} ga`;
+      inviteBtn.addEventListener('click', () => sendInvitation(uid, user.username));
+      li.appendChild(inviteBtn);
+      onlinePlayersList.appendChild(li);
+    });
+  }
+
+  // Online takliflar ref: /invitations/offererUid
+  function setupInvitationListeners(){
+    if(!currentUser) return;
+    if(invitationsRef) invitationsRef.off();
+    invitationsRef = db.ref('invitations/' + currentUser.uid);
+    invitationsRef.on('value', snapshot => {
+      const inviteData = snapshot.val();
+      if(inviteData && inviteData.from){
+        // Taklif olindi
+        handleIncomingInvitation(inviteData.from, inviteData.gameId);
+      } else {
+        clearInvitationUI();
+      }
+    });
+  }
+
+  // Taklif yuborish: taklif yuborgan joyda DB da yozamiz
+  async function sendInvitation(targetUid, targetUsername){
+    if(!currentUser) return;
+    if(currentGameId) {
+      alert('Siz hozir o‘yin ichidasiz, boshqa taklif yuborolmaysiz.');
+      return;
+    }
+
+    // max 1 ta taklif yuboriladi, uni oldini olish mumkin
+    invitationMsg.textContent = `Taklif yuborildi ${targetUsername} ga...`;
+    
+    // Ovoz chiqadi global mode uchun
+    globalModeSound.currentTime = 0;
+    globalModeSound.play().catch(() => {});
+
+    // O‘yin bazasida yangi game yaratamiz
+    const gameKey = db.ref('games').push().key;
+
+    // 1. Taklif yuboruvchi user /invitations/targetUid ga yozadi taklif tafsilotlarini
+    await db.ref('invitations/' + targetUid).set({
+      from: currentUser.username,
+      fromUid: currentUser.uid,
+      gameId: gameKey,
+      timestamp: Date.now()
+    });
+
+    // 2. O‘zimiz uchun game ID saqlaymiz
+    currentGameId = gameKey;
+    waitForGameStart(gameKey, targetUid);
+  }
+
+  // Taklifni qabul qilish yoki rad etish UI va DB
+  function handleIncomingInvitation(fromUsername, gameId){
+    // Ko'rsatish va ovoz
+    invitationMsg.innerHTML = `<strong>${fromUsername}</strong> sizga taklif yubordi! 
+      <button id="acceptInvBtn" aria-label="Taklifni qabul qilish">Qabul qilish</button> 
+      <button id="declineInvBtn" aria-label="Taklifni rad etish">Rad etish</button>`;
+    invitationSound.currentTime = 0;
+    invitationSound.play().catch(() => {});
+
+    document.getElementById('acceptInvBtn').focus();
+
+    document.getElementById('acceptInvBtn').onclick = async () => {
+      invitationMsg.textContent = 'Taklif qabul qilindi, o‘yin boshlanmoqda...';
+      // Taklif qabul qilindi deb yozamiz
+      await db.ref('games/' + gameId + '/players').set({
+        [currentUser.uid]: currentUser.username,
+        // fromUid foydalanuvchi ismi boshqasi
+      });
+      await db.ref('onlineUsers/' + currentUser.uid).update({status: 'playing'});
+      await db.ref('onlineUsers/' + currentUser.uid).update({lastActive: Date.now()});
+      currentGameId = gameId;
+      currentOpponent = {username: fromUsername};
+      joinGame(gameId, currentUser.uid);
+      invitationsRef.remove(); // Taklifni o'chiramiz
+      invitationMsg.textContent = '';
+      onlinePanel.classList.add('playing');
+      showEndGameButton(true);
+    };
+
+    document.getElementById('declineInvBtn').onclick = async () => {
+      invitationMsg.textContent = 'Taklif rad etildi.';
+      invitationsRef.remove();
+      invitationMsg.textContent = '';
+    };
+  }
+
+  function clearInvitationUI(){
+    invitationMsg.textContent = '';
+  }
+
+  // O'yin boshlanishini kutish (taklif yuboruvchi)
+  function waitForGameStart(gameId, opponentUid){
+    gameRef = db.ref('games/' + gameId);
+    gameRef.on('value', (snapshot) => {
+      const gameData = snapshot.val();
+      if(gameData && gameData.players){
+        const playersUIDs = Object.keys(gameData.players);
+        if(playersUIDs.length >= 2){
+          // O'yin boshlandi
+          onlinePanel.classList.add('playing');
+          showEndGameButton(true);
+          currentOpponent = {};
+          // opponentni aniqlash, bu hozir chaqirmagan user
+          for(let uid of playersUIDs){
+            if(uid !== currentUser.uid){
+              currentOpponent.username = gameData.players[uid];
+              break;
+            }
+          }
+          // Shunchaki tayyor o'yin holati borligini bildir
+          invitationMsg.textContent = `O'yin ${currentOpponent.username} bilan boshlandi!`;
+          listenOnlineUsers(); // update ro'yxat
+        }
+      }
+    });
+  }
+
+  // Online o'yinga qo'shilish: o'yin uchun o'yinni sozlash (keyingi bosqichda to'liq o'yin logikasi qo'shiladi)
+  function joinGame(gameId, uid){
+    // Fade UI elementlar va o'yin boshlanadi styles
+    invitationMsg.textContent = `Siz hozir <strong>${currentOpponent.username}</strong> bilan o'yinda!`;
+  }
+
+  // End game tugmasi boshqaruvi
+  let gameEnded = true; // true/false holatida, o'yin yakunida true
+
+  // End game tugmasini ko'rsatish yoki yashirish
+  function showEndGameButton(show){
+    if(show){
+      endGameBtn.classList.remove('hidden');
+      endGameBtn.setAttribute('aria-disabled', 'false');
+      gameEnded = false;
+    } else {
+      endGameBtn.classList.add('hidden');
+      endGameBtn.setAttribute('aria-disabled', 'true');
+      gameEnded = true;
+      endGameNotice.textContent = '';
+    }
+  }
+
+  endGameBtn.addEventListener('click', () => {
+    if(gameEnded){
+      // O'yinni tugatish va global online users bazasiga yozish
+      endCurrentGameAndAddToGlobal();
+    } else {
+      endGameNotice.textContent = "Press to add your name to global";
+      endGameUnavailableSound.currentTime = 0;
+      endGameUnavailableSound.play().catch(() => {});
     }
   });
+
+  async function endCurrentGameAndAddToGlobal(){
+    if(!currentUser) return;
+    if(gameRef){
+      await gameRef.remove();
+      gameRef.off();
+      gameRef = null;
+    }
+    currentGameId = null;
+    currentOpponent = null;
+
+    // Online status update
+    await db.ref('onlineUsers/' + currentUser.uid).update({status: 'available'});
+    showEndGameButton(false);
+    endGameNotice.textContent = "O'yin tugatildi, ismingiz globalga qo'shildi.";
+
+    endGameAvailableSound.currentTime = 0;
+    endGameAvailableSound.play().catch(() => {});
+
+    listenOnlineUsers();
+  }
+
+  // =========== O'yin rejimi boshqaruvi + UI update =======
+  modeToggle.addEventListener('change', e => {
+    updateGameMode(e.target.value);
+  });
+
+  function updateGameMode(newMode){
+    gameMode = newMode || 'alone';
+
+    if(gameMode === 'alone'){
+      onlinePanel.classList.add('hidden');
+      showEndGameButton(false);
+      aloneModeSound.currentTime = 0;
+      aloneModeSound.play().catch(() => {});
+      invitationMsg.textContent = '';
+      endGameNotice.textContent = '';
+    } else if(gameMode === 'global'){
+      onlinePanel.classList.remove('hidden');
+      // Online usersni doim yangilab turish uchun 'listenOnlineUsers' chaqirilgan bo'lishi kerak
+      globalModeSound.currentTime = 0;
+      globalModeSound.play().catch(() => {});
+    }
+  }
+
+  // ========== USER INTERFACE ========
+
+  function updateCurrentUsername(name){
+    currentUsernameDisplay.textContent = name || '---';
+  }
+
+  // ========== O'yin funksiyalari (v4 yetakchi kodingiz asosida) ==========
+
+  function playClickSound(){
+    clickSound.currentTime = 0;
+    clickSound.play().catch(() => {});
+  }
+
+  function SetButton(btn, text) {
+    btn.style.transform = 'rotate(360deg)';
+    setTimeout(() => {
+      btn.textContent = text;
+      btn.style.transform = '';
+    }, 100);
+    btn.dataset.text = text;
+  }
+
+  function launchConfetti() {
+    confetti({
+      particleCount: 150,
+      spread: 90,
+      origin: { y: 0.6 },
+      disableForReducedMotion: true
+    });
+
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 }
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 }
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    })();
+  }
+
+  function CheckWin() {
+    touch = false;
+    const winRows = ["012", "345", "678", "036", "147", "258", "048", "642"];
+    for (const rowIndex of winRows) {
+      let row = "";
+      for (let j = 0; j < 3; j++) {
+        row += btns[+rowIndex[j]].dataset.text || '';
+      }
+      if (row === 'XXX' || row === 'OOO') {
+        EndGame(player);
+        if(gameMode === 'global') showEndGameButton(true);
+        return;
+      }
+    }
+
+    if (round > 9) {
+      EndGame(0);
+      if(gameMode === 'global') showEndGameButton(true);
+      return;
+    }
+    txtPlayer.textContent = "Player " + player;
+  }
+
+  function EndGame(winner) {
+    btns.forEach(btn => btn.disabled = true);
+
+    if (winner) {
+      scoreMsg.textContent = `Player ${winner} won! 🎉`;
+      celebrateSound.currentTime = 0;
+      celebrateSound.play().catch(() => {});
+      launchConfetti();
+    } else {
+      scoreMsg.textContent = `It's a draw!`;
+      winSound.currentTime = 0;
+      winSound.play().catch(() => {});
+    }
+
+    celebration.style.display = 'flex';
+  }
+
+  function ResetGame() {
+    celebration.style.display = 'none';
+
+    btns.forEach((btn) => {
+      btn.disabled = false;
+      SetButton(btn, '');
+    });
+
+    round = 1;
+    player = 1;
+    touch = false;
+    txtPlayer.textContent = "Player 1";
+
+    if(gameMode === 'global'){
+      showEndGameButton(false);
+    }
+  }
+
+  function btn_OnTouch(e) {
+    if (touch) return;
+    touch = true;
+
+    playClickSound();
+
+    if(gameMode === 'global' && !currentGameId){
+      invitationMsg.textContent = 'Siz hali herkese ulanmagan o`yindasiz. Taklif olmagansiz.';
+      return;
+    }
+
+    let btn = e.currentTarget;
+    player = round % 2 === 1 ? 1 : 2;
+
+    if (btn.dataset.text && btn.dataset.text !== '') {
+      touch = false;
+      return;
+    }
+
+    setTimeout(() => {
+      btn.style.opacity = player === 1 ? '0.6' : '1';
+      setTimeout(() => btn.style.opacity = '1', 300);
+    }, 50);
+
+    SetButton(btn, 'XO'[player - 1]);
+    round++;
+    setTimeout(CheckWin, 220);
+  }
+
+  btns.forEach(btn => {
+    btn.dataset.text = '';
+    btn.addEventListener('click', btn_OnTouch);
+  });
+
+  // Sozlamalar boshqaruvi
+  settingsToggle.addEventListener('click', () => toggleSettingsPanel(true));
+  settingsClose.addEventListener('click', () => toggleSettingsPanel(false));
 
   changeUsernameBtn.addEventListener('click', async () => {
     const newName = newUsernameInput.value.trim();
@@ -326,7 +744,6 @@
     }
   });
 
-  // Sozlamalar paneli toggle
   function toggleSettingsPanel(show) {
     if(show){
       settingsPanel.classList.remove('hidden');
@@ -338,109 +755,6 @@
       newUsernameInput.value = '';
     }
   }
-  settingsToggle.addEventListener('click', () => toggleSettingsPanel(true));
-  settingsClose.addEventListener('click', () => toggleSettingsPanel(false));
-
-  // Update UI username ko‘rsatish
-  function updateCurrentUsername(name){
-    currentUsernameDisplay.textContent = name || '---';
-  }
-
-  // O'yin funksiyalari (v3 dan)
-  function playClickSound(){
-    clickSound.currentTime = 0;
-    clickSound.play().catch(() => {});
-  }
-  function SetButton(btn, text) {
-    btn.style.transform = 'rotate(360deg)';
-    setTimeout(() => {
-      btn.textContent = text;
-      btn.style.transform = '';
-    }, 100);
-    btn.dataset.text = text;
-  }
-  function launchConfetti() {
-    confetti({
-      particleCount: 150,
-      spread: 90,
-      origin: { y: 0.6 },
-      disableForReducedMotion: true
-    });
-    const duration = 3000;
-    const end = Date.now() + duration;
-    (function frame() {
-      confetti({
-        particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }
-      });
-      confetti({
-        particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }
-      });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    })();
-  }
-  function CheckWin() {
-    touch = false;
-    const winRows = ["012", "345", "678", "036", "147", "258", "048", "642"];
-    for (const rowIndex of winRows) {
-      let row = "";
-      for (let j = 0; j < 3; j++) {
-        row += btns[+rowIndex[j]].dataset.text || '';
-      }
-      if (row === 'XXX' || row === 'OOO') {
-        return EndGame(player);
-      }
-    }
-    if (round > 9) return EndGame(0); 
-    txtPlayer.textContent = "Player " + player;
-  }
-  function EndGame(winner) {
-    btns.forEach(btn => btn.disabled = true);
-    if (winner) {
-      scoreMsg.textContent = `Player ${winner} won! 🎉`;
-      celebrateSound.currentTime = 0;
-      celebrateSound.play().catch(() => {});
-      launchConfetti();
-    } else {
-      scoreMsg.textContent = `It's a draw!`;
-      winSound.currentTime = 0;
-      winSound.play().catch(() => {});
-    }
-    celebration.style.display = 'flex';
-  }
-  function ResetGame() {
-    celebration.style.display = 'none';
-    btns.forEach((btn) => {
-      btn.disabled = false;
-      SetButton(btn, '');
-    });
-    round = 1;
-    player = 1;
-    touch = false;
-    txtPlayer.textContent = "Player 1";
-  }
-  function btn_OnTouch(e) {
-    if (touch) return;
-    touch = true;
-    playClickSound();
-    let btn = e.currentTarget;
-    player = round % 2 === 1 ? 1 : 2;
-    if (btn.dataset.text && btn.dataset.text !== '') {
-      touch = false;
-      return;
-    }
-    setTimeout(() => {
-      btn.style.opacity = player === 1 ? '0.6' : '1';
-      setTimeout(() => btn.style.opacity = '1', 300);
-    }, 50);
-    SetButton(btn, 'XO'[player - 1]);
-    round++;
-    setTimeout(CheckWin, 220);
-  }
-  btns.forEach(btn => {
-    btn.dataset.text = '';
-    btn.addEventListener('click', btn_OnTouch);
-  });
-  txtPlayer.textContent = "Player 1";
 
 </script>
 
