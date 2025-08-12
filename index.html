@@ -1,114 +1,10 @@
-<!--Firebase Project-->
-<!--SololearnBallPick-->
-
-<!--AI turi-->
-<!--https://www.perplexity.ai/-->
-
-<!--v3 uchun talab-->
-<!--v2 dastur: `````` foydalanuvchi faqat 1 marta o'z ismi bilan login qilsin, keyin har safar shu ismda o'yinga avtomatik kirsin. 1ta usernameni faqat 1 kishi band qilsin lekin uni sozlamalardan o'zgartirib bo'lsin va faqat bo'sh usernamega almashtira olsin. v2 dasturdan ko'k rangni kulrang bilan mos tushadigan chiroyliroq rang bilan almashtir-->
-
-<!--v2.0.0 dastur-->
 <!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tic-Tac-To o'yini</title>
-<style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #883355;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    color: white;
-    overflow: hidden;
-  }
-  #container {
-    background-color: #3355cc;
-    padding: 15px;
-    border-radius: 10px;
-    box-sizing: border-box;
-    width: 320px;
-    user-select: none;
-    position: relative;
-    z-index: 10;
-  }
-  #playerText {
-    font-size: 2.5rem;
-    text-align: center;
-    margin: 0 0 15px 0;
-  }
-  .row {
-    display: flex;
-  }
-  .btn {
-    background-color: gray;
-    border: none;
-    width: 100px;
-    height: 100px;
-    font-size: 4rem;
-    color: white;
-    cursor: pointer;
-    margin: 2px;
-    border-radius: 8px;
-    transition: transform 0.2s ease;
-    outline: none;
-  }
-  .btn:disabled {
-    cursor: default;
-    opacity: 0.7;
-  }
-
-  /* Tabriklash sahnasi */
-  #celebration {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    z-index: 20;
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    text-align: center;
-  }
-  #celebration h2 {
-    font-size: 32px;
-    margin: 0;
-  }
-  #play-again {
-    margin-top: 20px;
-    padding: 10px 25px;
-    font-size: 16px;
-    border: none;
-    border-radius: 25px;
-    background-color: white;
-    color: #764ba2;
-    font-weight: bold;
-    cursor: pointer;
-    outline: none;
-  }
-  #play-again:hover {
-    background-color: #eee;
-    transform: translateY(-2px);
-  }
-
-  canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 15;
-  }
-</style>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -149,6 +45,7 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <script>
+  /* Sizning asl script kodi shu yerda o'zgarmagan holda qoldiriladi */
   const btns = Array.from(document.querySelectorAll('.btn'));
   const txtPlayer = document.getElementById('playerText');
   const celebration = document.getElementById('celebration');
@@ -163,7 +60,6 @@
   let player = 1;
   let touch = false;
 
-  // Tugma uchun bosilish ovozi
   function playClickSound(){
     clickSound.currentTime = 0;
     clickSound.play().catch(() => {});
@@ -222,13 +118,11 @@
       }
     }
 
-    // 9 ta qadam to'liq to'ldimi? (round dan 1 oshirib hisoblang)
     if (round > 9) return EndGame(0); // Durang
     txtPlayer.textContent = "Player " + player;
   }
 
   function EndGame(winner) {
-    // O‘yin tugadi, tugmalarni o'chirish uchun barchasini disabled qilamiz
     btns.forEach(btn => btn.disabled = true);
 
     if (winner) {
@@ -241,13 +135,10 @@
       winSound.currentTime = 0;
       winSound.play().catch(() => {});
     }
-
-    // Tabriklash oynasini ko'rsatamiz
     celebration.style.display = 'flex';
   }
 
   function ResetGame() {
-    // Tabriklash oynasini yashiramiz
     celebration.style.display = 'none';
 
     btns.forEach((btn, i) => {
@@ -291,7 +182,7 @@
   });
 
   txtPlayer.textContent = "Player 1";
-
 </script>
+
 </body>
 </html>
